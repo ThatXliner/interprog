@@ -19,7 +19,7 @@ homepage = "https://github.com/ThatXliner/interprog"
 # keywords = ["awesome", "project"]  # Maximum of 5 keywords
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
