@@ -1,7 +1,7 @@
 name: CI
 on:
   schedule:
-    - cron: "0 0 1 * *"  # Run every month
+    - cron: "0 0 1 * *" # Run every month
   # This way, we can make sure code doesn't break via external dependancies
   push:
   pull_request:
@@ -11,9 +11,9 @@ jobs:
     strategy:
       matrix:
         python-version:
-         - 3.8
-         - 3.9
-         - "3.10"
+          - 3.8
+          - 3.9
+          - "3.10"
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -23,8 +23,10 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install Poetry 1.2.0
+        run: |
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.2.0 POETRY_HOME="$HOME/.local" python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dependencies (UNIX)
         if: runner.os != 'Windows'
         run: |
@@ -49,8 +51,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install Poetry 1.2.0
+        run: |
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.2.0 POETRY_HOME="$HOME/.local" python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip poethepoet
@@ -66,7 +70,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install Poetry 1.2.0
+        run: |
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.2.0 POETRY_HOME="$HOME/.local" python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Build project
         run: poetry build
