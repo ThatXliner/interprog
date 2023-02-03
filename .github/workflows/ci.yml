@@ -5,7 +5,9 @@ on:
   # This way, we can make sure code doesn't break via external dependancies
   push:
   pull_request:
-
+defaults:
+  run:
+    shell: bash
 jobs:
   test:
     strategy:
