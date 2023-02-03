@@ -5,6 +5,9 @@
 
 > Inter-process progress reports made easy
 
+> **Note**
+> If you're already using an RPC framework such as JSON-RPC or gRPC, you probably shouldn't be using this but instead implementing progress reporting within your existing framework. See [this StackOverflow post](https://stackoverflow.com/questions/64352861/is-there-a-way-to-get-progress-messages-from-grpc-request) for ideas.
+
 
 ## Installation
 
