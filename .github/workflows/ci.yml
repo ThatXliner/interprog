@@ -8,7 +8,7 @@ on:
 env:
   POETRY_VERSION: 1.3.0
 jobs:
-  test-python:
+  python-tests:
     strategy:
       matrix:
         python-version:
@@ -44,25 +44,29 @@ jobs:
         run: poe ci
       - name: Upload to CodeCov
         uses: codecov/codecov-action@v2
-  docs:
+  python-docs:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/python
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
           python-version: 3
-      - name: Install dependencies (Python)
+      - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip poetry==$POETRY_VERSION poethepoet
-          cd ./src/python
           poetry install
           poetry install  # Second time to install the project
-      - name: Build docs (Python)
-        working-directory: ./src/python
+      - name: Build docs
         run: poe docs
-  build:
+  python-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/python
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -74,5 +78,4 @@ jobs:
           curl -sSL https://install.python-poetry.org | POETRY_HOME="$HOME/.local" python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Build project
-        working-directory: ./src/python
         run: poetry build
