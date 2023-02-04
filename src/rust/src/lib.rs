@@ -28,13 +28,13 @@ pub enum Progress {
     /// executed. The `total` field is optional. If it exists/is not null,
     /// it means the task is *iterative* and has a known end
     /// Otherwise, we assume it to be a spinner task.
-    /// The total field exists since if we use
-    /// ```
-    /// InProgress{done: 0, total: X}
+    /// The total field exists since if we use, say
+    /// ```ignore
+    /// Progress::InProgress{done: 0, total: X}
     /// ```
     /// instead of
-    /// ```
-    /// Pending{total: X}
+    /// ```ignore
+    /// Progress::Pending{total: X}
     /// ```
     /// it is ambiguous whether or not the task has already
     /// started or not.
