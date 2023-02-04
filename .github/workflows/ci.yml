@@ -93,9 +93,7 @@ jobs:
         with:
           toolchain: stable
       - name: Build project
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: cargo build
   rust-lint:
     runs-on: ubuntu-latest
     defaults:
@@ -110,13 +108,9 @@ jobs:
           components: rustfmt, clippy
           toolchain: stable
       - name: Lint with clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
+        run: cargo clippy
       - name: Lint with fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt --check
+        run: cargo fmt --check
   rust-test:
     # TODO: Do we need multiple OSs?
     runs-on: ubuntu-latest
@@ -131,6 +125,4 @@ jobs:
         with:
           toolchain: stable
       - name: Test project
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test
