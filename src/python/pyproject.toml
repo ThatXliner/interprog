@@ -16,7 +16,7 @@ classifiers = [
 ]
 documentation = "https://interprog.readthedocs.io/en/latest/index.html"
 homepage = "https://github.com/ThatXliner/interprog"
-# keywords = ["awesome", "project"]  # Maximum of 5 keywords
+keywords = ["ipc", "progress", "interprog"]  # Maximum of 5 keywords
 
 [tool.poetry.dependencies]
 python = "^3.8"
