@@ -256,4 +256,21 @@ mod tests {
         manager.start();
         manager.finish();
     }
+    #[test]
+    fn real_example() {
+        let mut manager = TaskManager::new();
+        manager.add_task("Log in", None);
+        manager.start();
+        manager.finish();
+        let CLASSSES = vec!["English", "History", "Science", "Math"];
+        for class in &CLASSSES {
+            manager.add_task(&(format!("Scraping {class}")), None);
+            manager.set_task_total(&(format!("Scraping {class}")), 4);
+        }
+        for _ in 0..4 {
+            for class in &CLASSSES {
+                manager.increment_task(&(format!("Scraping {class}")), 1, false);
+            }
+        }
+    }
 }
