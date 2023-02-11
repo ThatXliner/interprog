@@ -1,6 +1,8 @@
 //! Inter-process progress reports.
 //!
 //! This module contains a `TaskManager` which you should instantiate once and reuse. It will schedule and output the tasks that you set to be running, queued, finished, and/or errored
+pub mod errors;
+
 use serde::{Deserialize, Serialize};
 use serde_json::ser::to_string as to_json;
 use std::collections::HashMap;
@@ -88,7 +90,7 @@ pub struct TaskManager {
     pub task_counter: usize,
     pub silent: bool,
 }
-
+// TODO: For non `*_task` method variants, make it return smth instead of panicking on an empty task list
 impl TaskManager {
     fn output(&self) {
         if self.silent {
@@ -109,23 +111,35 @@ impl TaskManager {
         }
     }
 
-    pub fn set_task_total(&mut self, task_name: &str, new_total: usize) {
-        let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
+    pub fn set_task_total(
+        &mut self,
+        task_name: &str,
+        new_total: usize,
+    ) -> Result<(), errors::ManagerError> {
+        let task = &mut self
+            .tasks
+            .get_mut(task_name)
+            .ok_or(errors::ManagerError::NonexistentTask)?;
 
         if let Status::Pending { total: _ } = &task.progress {
             task.progress = Status::Pending {
                 total: Some(new_total),
             }
         } else {
-            panic!("Task already started");
+            return Err(errors::ManagerError::TaskAlreadyStarted);
         }
+        Ok(())
     }
-    pub fn set_total(&mut self, new_total: usize) {
+    pub fn set_total(&mut self, new_total: usize) -> Result<(), errors::ManagerError> {
         let task_name: String = self.task_list[self.task_counter].clone();
-        self.set_task_total(&task_name, new_total);
+        self.set_task_total(&task_name, new_total)
     }
 
-    pub fn add_task(&mut self, name: &str, total: Option<usize>) {
+    pub fn add_task(
+        &mut self,
+        name: &str,
+        total: Option<usize>,
+    ) -> Result<(), errors::ManagerError> {
         self.tasks.insert(
             name.to_string(),
             Task {
@@ -134,10 +148,14 @@ impl TaskManager {
             },
         );
         self.task_list.push(name.to_string());
+        Ok(())
     }
 
-    pub fn start_task(&mut self, task_name: &str) {
-        let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
+    pub fn start_task(&mut self, task_name: &str) -> Result<(), errors::ManagerError> {
+        let task = &mut self
+            .tasks
+            .get_mut(task_name)
+            .ok_or(errors::ManagerError::NonexistentTask)?;
         if let Status::Pending { total } = &task.progress {
             match total {
                 Some(total) => {
@@ -150,17 +168,26 @@ impl TaskManager {
                 None => task.progress = Status::Running,
             }
         } else {
-            panic!("Task is already running")
+            return Err(errors::ManagerError::TaskAlreadyStarted);
         }
         self.output();
+        Ok(())
     }
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> Result<(), errors::ManagerError> {
         let task_name: String = self.task_list[self.task_counter].clone();
-        self.start_task(&task_name);
+        self.start_task(&task_name)
     }
 
-    pub fn increment_task(&mut self, task_name: &str, by: usize, silent: bool) {
-        let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
+    pub fn increment_task(
+        &mut self,
+        task_name: &str,
+        by: usize,
+        silent: bool, // XXX? We are returning Result now
+    ) -> Result<(), errors::ManagerError> {
+        let task = &mut self
+            .tasks
+            .get_mut(task_name)
+            .ok_or(errors::ManagerError::NonexistentTask)?;
         // Never started before
         match &task.progress {
             Status::Pending { total: Some(total) } => {
@@ -177,10 +204,11 @@ impl TaskManager {
             } => {
                 if done >= total {
                     if !silent {
-                        panic!("Maxed out");
+                        return Err(errors::ManagerError::MaxedOutTask);
                     }
-                    return;
+                    return Ok(());
                 }
+                // TODO: If incrementing makes it full, do we consider finished?
                 task.progress = Status::InProgress {
                     done: done + by,
                     total: *total,
@@ -194,18 +222,22 @@ impl TaskManager {
                 if !silent {
                     panic!("Task already finished");
                 }
-                return;
+                return Ok(());
             }
         }
         self.output();
+        Ok(())
     }
-    pub fn increment(&mut self, by: usize, silent: bool) {
+    pub fn increment(&mut self, by: usize, silent: bool) -> Result<(), errors::ManagerError> {
         let task_name: String = self.task_list[self.task_counter].clone();
-        self.increment_task(&task_name, by, silent);
+        self.increment_task(&task_name, by, silent)
     }
 
-    pub fn finish_task(&mut self, task_name: &str) {
-        let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
+    pub fn finish_task(&mut self, task_name: &str) -> Result<(), errors::ManagerError> {
+        let task = &mut self
+            .tasks
+            .get_mut(task_name)
+            .ok_or(errors::ManagerError::NonexistentTask)?;
         // TODO: Implement subtasks
         // if let Status::InProgress {
         //     done: _,
@@ -221,23 +253,32 @@ impl TaskManager {
         task.progress = Status::Finished;
         self.task_counter += 1;
         self.output();
+        Ok(())
     }
-    pub fn finish(&mut self) {
+    pub fn finish(&mut self) -> Result<(), errors::ManagerError> {
         let task_name: String = self.task_list[self.task_counter].clone();
-        self.finish_task(&task_name);
+        self.finish_task(&task_name)
     }
 
-    pub fn error_task(&mut self, task_name: &str, message: &str) {
-        let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
+    pub fn error_task(
+        &mut self,
+        task_name: &str,
+        message: &str,
+    ) -> Result<(), errors::ManagerError> {
+        let task = &mut self
+            .tasks
+            .get_mut(task_name)
+            .ok_or(errors::ManagerError::NonexistentTask)?;
         task.progress = Status::Error {
             message: message.to_string(),
         };
         self.task_counter += 1;
         self.output();
+        Ok(())
     }
-    pub fn error(&mut self, message: &str) {
+    pub fn error(&mut self, message: &str) -> Result<(), errors::ManagerError> {
         let task_name: String = self.task_list[self.task_counter].clone();
-        self.error_task(&task_name, message);
+        self.error_task(&task_name, message)
     }
 }
 impl Default for TaskManager {
@@ -253,24 +294,30 @@ mod tests {
     fn it_works() {
         let mut manager = TaskManager::new();
         println!("Hi");
-        manager.add_task("name", None);
-        manager.start();
-        manager.finish();
+        manager.add_task("name", None).unwrap();
+        manager.start().unwrap();
+        manager.finish().unwrap();
     }
     #[test]
     fn real_example() {
         let mut manager = TaskManager::new();
-        manager.add_task("Log in", None);
-        manager.start();
-        manager.finish();
+        manager.add_task("Log in", None).unwrap();
+        manager.start().unwrap();
+        manager.finish().unwrap();
         let CLASSES = vec!["English", "History", "Science", "Math"];
         for class in &CLASSES {
-            manager.add_task(&(format!("Scraping {class}")), None);
-            manager.set_task_total(&(format!("Scraping {class}")), 4);
+            manager
+                .add_task(&(format!("Scraping {class}")), None)
+                .unwrap();
+            manager
+                .set_task_total(&(format!("Scraping {class}")), 4)
+                .unwrap();
         }
         for _ in 0..4 {
             for class in &CLASSES {
-                manager.increment_task(&(format!("Scraping {class}")), 1, false);
+                manager
+                    .increment_task(&(format!("Scraping {class}")), 1, false)
+                    .unwrap();
             }
         }
     }
