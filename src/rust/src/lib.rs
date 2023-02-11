@@ -13,11 +13,12 @@ pub struct Task {
     /// The name of a task
     pub name: String,
     /// The current status of a task
-    /// This field is named "progress"
-    /// since the serialization will have a "status"
-    /// field for the name.
     /// Making this field flattened (so there's no `progress` key in the first place) with `#[serde(flatten)]` would
     /// make it be annoying for other implementations to deserialize output in a type-safe manner
+    ///
+    /// ## Notes on the naming
+    /// - This field is named "progress" since the serialization will have a "status" field for the name.
+    /// - Naming this field `status` and renaming the current key for the status type to `type` (it's currently `status`) does not reflect that this whole key-value pair is about the progress of the task.
     pub progress: Status,
 }
 /// Represents the status of a task.
