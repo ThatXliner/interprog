@@ -15,10 +15,10 @@ pub struct Task {
     /// The current status of a task
     /// This field is named "progress"
     /// since the serialization will have a "status"
-    /// field for the name
-    ///
-    /// TODO: Change that... Change the struct name too
-    pub progress: Progress,
+    /// field for the name.
+    /// Making this field flattened (so there's no `progress` key in the first place) with `#[serde(flatten)]` would
+    /// make it be annoying for other implementations to deserialize output in a type-safe manner
+    pub progress: Status,
 }
 /// Represents the status of a task.
 ///
@@ -26,7 +26,7 @@ pub struct Task {
 /// But since there are 2 types of running (iterative or spinner) and 3 types of finished (success and error), thus 5 variants
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "status")]
-pub enum Progress {
+pub enum Status {
     /// Represents a pending task, waiting to be executed.
     ///
     /// The `total` field is optional. If it exists/is not null,
@@ -34,15 +34,15 @@ pub enum Progress {
     /// Otherwise, we assume it to be a spinner task.
     /// The total field exists in this `Pending` vairant since if we use, say
     /// ```
-    /// # use interprog::Progress;
+    /// # use interprog::Status;
     /// # let X = 1;
-    /// Progress::InProgress{done: 0, total: X};
+    /// Status::InProgress{done: 0, total: X};
     /// ```
     /// to represent a pending task with a known total instead of
     /// ```
-    /// # use interprog::Progress;
+    /// # use interprog::Status;
     /// # let X = Some(1);
-    /// Progress::Pending{total: X};
+    /// Status::Pending{total: X};
     /// ```
     /// it is ambiguous whether or not the task has already
     /// started or not.
@@ -111,8 +111,8 @@ impl TaskManager {
     pub fn set_task_total(&mut self, task_name: &str, new_total: usize) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
 
-        if let Progress::Pending { total: _ } = &task.progress {
-            task.progress = Progress::Pending {
+        if let Status::Pending { total: _ } = &task.progress {
+            task.progress = Status::Pending {
                 total: Some(new_total),
             }
         } else {
@@ -129,7 +129,7 @@ impl TaskManager {
             name.to_string(),
             Task {
                 name: name.to_string(),
-                progress: Progress::Pending { total },
+                progress: Status::Pending { total },
             },
         );
         self.task_list.push(name.to_string());
@@ -137,16 +137,16 @@ impl TaskManager {
 
     pub fn start_task(&mut self, task_name: &str) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
-        if let Progress::Pending { total } = &task.progress {
+        if let Status::Pending { total } = &task.progress {
             match total {
                 Some(total) => {
-                    task.progress = Progress::InProgress {
+                    task.progress = Status::InProgress {
                         done: 0,
                         total: *total,
                         // subtasks: None,
                     };
                 }
-                None => task.progress = Progress::Running,
+                None => task.progress = Status::Running,
             }
         } else {
             panic!("Task is already running")
@@ -162,14 +162,14 @@ impl TaskManager {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
         // Never started before
         match &task.progress {
-            Progress::Pending { total: Some(total) } => {
-                task.progress = Progress::InProgress {
+            Status::Pending { total: Some(total) } => {
+                task.progress = Status::InProgress {
                     done: 1,
                     total: *total,
                     // subtasks: None,
                 };
             }
-            Progress::InProgress {
+            Status::InProgress {
                 done,
                 total,
                 // subtasks: _,
@@ -180,13 +180,13 @@ impl TaskManager {
                     }
                     return;
                 }
-                task.progress = Progress::InProgress {
+                task.progress = Status::InProgress {
                     done: done + by,
                     total: *total,
                     // subtasks: None,
                 };
             }
-            Progress::Running if !silent => {
+            Status::Running if !silent => {
                 panic!("Task is a spinner");
             }
             _ => {
@@ -206,7 +206,7 @@ impl TaskManager {
     pub fn finish_task(&mut self, task_name: &str) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
         // TODO: Implement subtasks
-        // if let Progress::InProgress {
+        // if let Status::InProgress {
         //     done: _,
         //     total: _,
         //     subtasks: Some(ref mut subtasks),
@@ -217,7 +217,7 @@ impl TaskManager {
         //     }
         // }
 
-        task.progress = Progress::Finished;
+        task.progress = Status::Finished;
         self.task_counter += 1;
         self.output();
     }
@@ -228,7 +228,7 @@ impl TaskManager {
 
     pub fn error_task(&mut self, task_name: &str, message: &str) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
-        task.progress = Progress::Error {
+        task.progress = Status::Error {
             message: message.to_string(),
         };
         self.task_counter += 1;
