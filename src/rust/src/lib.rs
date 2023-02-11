@@ -262,13 +262,13 @@ mod tests {
         manager.add_task("Log in", None);
         manager.start();
         manager.finish();
-        let CLASSSES = vec!["English", "History", "Science", "Math"];
-        for class in &CLASSSES {
+        let CLASSES = vec!["English", "History", "Science", "Math"];
+        for class in &CLASSES {
             manager.add_task(&(format!("Scraping {class}")), None);
             manager.set_task_total(&(format!("Scraping {class}")), 4);
         }
         for _ in 0..4 {
-            for class in &CLASSSES {
+            for class in &CLASSES {
                 manager.increment_task(&(format!("Scraping {class}")), 1, false);
             }
         }
