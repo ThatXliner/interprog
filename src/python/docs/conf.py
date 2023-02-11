@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "Interprog"
-copyright = "2021, Bryan Hu"
+copyright = "2022, Bryan Hu"
 author = "Bryan Hu"
 
 # The full version, including alpha/beta/rc tags
