@@ -1,40 +1,48 @@
-/// # Interprog
-/// Inter-process progress reports
-/// This module contains a `TaskManager`
-/// Which you should instantiate once
-/// and reuse. It will schedule and output the tasks
-/// that you set to be running, queued, finished, and/or errored
+//! Inter-process progress reports.
+//!
+//! This module contains a `TaskManager` which you should instantiate once and reuse. It will schedule and output the tasks that you set to be running, queued, finished, and/or errored
 use serde::{Deserialize, Serialize};
 use serde_json::ser::to_string as to_json;
 use std::collections::HashMap;
 use std::io::{self, Write};
-/// Represents a task. All tasks must have a name
-/// TODO: Maybe change API to use macro/factory
-/// and a .add method on the `TaskManager`?
+/// Represents a task.
+///
+/// TODO: Maybe change API to use macro/factory and a `.add` method on the `TaskManager`?
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Task {
+    /// The name of a task
     pub name: String,
+    /// The current status of a task
+    /// This field is named "progress"
+    /// since the serialization will have a "status"
+    /// field for the name
+    ///
+    /// TODO: Change that...
     pub progress: Progress,
 }
 /// Represents the status of a task.
+///
 /// There are 3 main states: Pending, Running, and finished.
-/// But since there are 2 types of running (iterative or spinner)
-/// and 3 types of finished (success and error)
-/// There are 5 variants
+/// But since there are 2 types of running (iterative or spinner) and 3 types of finished (success and error), thus 5 variants
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "status")]
 pub enum Progress {
-    /// Represents a pending task, waiting to be
-    /// executed. The `total` field is optional. If it exists/is not null,
+    /// Represents a pending task, waiting to be executed.
+    ///
+    /// The `total` field is optional. If it exists/is not null,
     /// it means the task is *iterative* and has a known end
     /// Otherwise, we assume it to be a spinner task.
-    /// The total field exists since if we use, say
-    /// ```ignore
-    /// Progress::InProgress{done: 0, total: X}
+    /// The total field exists in this `Pending` vairant since if we use, say
     /// ```
-    /// instead of
-    /// ```ignore
-    /// Progress::Pending{total: X}
+    /// # use interprog::Progress;
+    /// # let X = 1;
+    /// Progress::InProgress{done: 0, total: X, subtasks: None};
+    /// ```
+    /// to represent a pending task with a known total instead of
+    /// ```
+    /// # use interprog::Progress;
+    /// # let X = Some(1);
+    /// Progress::Pending{total: X};
     /// ```
     /// it is ambiguous whether or not the task has already
     /// started or not.
@@ -46,12 +54,13 @@ pub enum Progress {
     /// Self-explanatory
     #[serde(rename = "finished")]
     Finished,
-    /// A **spinner task** (unknown end and/or subtasks)
-    /// is running
+    /// Like `InProgress` but for non-iterative tasks (unknown total)
     #[serde(rename = "running")]
     Running,
     /// An **iterative task** (known end and/or subtasks)
-    /// is running. `done` out of `total` tasks were finished
+    /// is running.
+    ///
+    /// `done` out of `total` tasks were finished
     /// The `subtasks` field is currently unused but will be
     /// in the future when we implement nested tasks
     /// TODO: implement subtasks
@@ -63,6 +72,7 @@ pub enum Progress {
     },
 }
 /// The main struct that manages printing tasks
+///
 /// Most methods have an `task` variant that
 /// works on a specified task name instead of
 /// the first unfinished task (FIFO). This is to
@@ -71,7 +81,6 @@ pub enum Progress {
 /// Yes, this struct is currently *not thread-safe*
 /// (I think)
 #[derive(Serialize, Deserialize, Debug)]
-
 pub struct TaskManager {
     pub tasks: HashMap<String, Task>,
     pub task_list: Vec<String>,
@@ -103,25 +112,14 @@ impl TaskManager {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
 
         match &task.progress {
-            Progress::InProgress {
-                done: _,
-                total: _,
-                subtasks: _,
-            } => {
-                task.progress = Progress::InProgress {
-                    done: 0,
-                    total: new_total,
-                    subtasks: None,
-                };
-            }
-            // Should we mutate `total` this instead?
+            // Should we mutate `total` instead?
             Progress::Pending { total: _ } => {
                 task.progress = Progress::Pending {
                     total: Some(new_total),
                 }
             }
             _ => {
-                panic!("Only iterative tasks may have a total");
+                panic!("Task already started");
             }
         }
     }
@@ -204,7 +202,7 @@ impl TaskManager {
 
     pub fn finish_task(&mut self, task_name: &str) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
-        // TODO: Implement
+        // TODO: Implement subtasks
         // if let Progress::InProgress {
         //     done: _,
         //     total: _,
