@@ -17,7 +17,7 @@ pub struct Task {
     /// since the serialization will have a "status"
     /// field for the name
     ///
-    /// TODO: Change that...
+    /// TODO: Change that... Change the struct name too
     pub progress: Progress,
 }
 /// Represents the status of a task.
@@ -36,7 +36,7 @@ pub enum Progress {
     /// ```
     /// # use interprog::Progress;
     /// # let X = 1;
-    /// Progress::InProgress{done: 0, total: X, subtasks: None};
+    /// Progress::InProgress{done: 0, total: X};
     /// ```
     /// to represent a pending task with a known total instead of
     /// ```
@@ -68,7 +68,7 @@ pub enum Progress {
     InProgress {
         done: usize,
         total: usize,
-        subtasks: Option<TaskManager>,
+        // subtasks: Option<TaskManager>,
     },
 }
 /// The main struct that manages printing tasks
@@ -148,7 +148,7 @@ impl TaskManager {
                     task.progress = Progress::InProgress {
                         done: 0,
                         total: *total,
-                        subtasks: None,
+                        // subtasks: None,
                     };
                 }
             },
@@ -170,13 +170,13 @@ impl TaskManager {
             task.progress = Progress::InProgress {
                 done: 1,
                 total: *total,
-                subtasks: None,
+                // subtasks: None,
             };
             self.output();
         } else if let Progress::InProgress {
             done,
             total,
-            subtasks: _,
+            // subtasks: _,
         } = &task.progress
         {
             if done >= total {
@@ -188,7 +188,7 @@ impl TaskManager {
             task.progress = Progress::InProgress {
                 done: done + by,
                 total: *total,
-                subtasks: None, // TODO: Implement
+                // subtasks: None,
             };
             self.output();
         } else if !silent {
