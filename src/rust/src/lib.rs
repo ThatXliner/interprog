@@ -111,16 +111,12 @@ impl TaskManager {
     pub fn set_task_total(&mut self, task_name: &str, new_total: usize) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
 
-        match &task.progress {
-            // Should we mutate `total` instead?
-            Progress::Pending { total: _ } => {
-                task.progress = Progress::Pending {
-                    total: Some(new_total),
-                }
+        if let Progress::Pending { total: _ } = &task.progress {
+            task.progress = Progress::Pending {
+                total: Some(new_total),
             }
-            _ => {
-                panic!("Task already started");
-            }
+        } else {
+            panic!("Task already started");
         }
     }
     pub fn set_total(&mut self, new_total: usize) {
@@ -141,9 +137,8 @@ impl TaskManager {
 
     pub fn start_task(&mut self, task_name: &str) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
-        match &task.progress {
-            Progress::Pending { total } => match total {
-                None => task.progress = Progress::Running,
+        if let Progress::Pending { total } = &task.progress {
+            match total {
                 Some(total) => {
                     task.progress = Progress::InProgress {
                         done: 0,
@@ -151,10 +146,10 @@ impl TaskManager {
                         // subtasks: None,
                     };
                 }
-            },
-            _ => {
-                panic!("Task is already running")
+                None => task.progress = Progress::Running,
             }
+        } else {
+            panic!("Task is already running")
         }
         self.output();
     }
@@ -166,34 +161,42 @@ impl TaskManager {
     pub fn increment_task(&mut self, task_name: &str, by: usize, silent: bool) {
         let task = &mut self.tasks.get_mut(task_name).expect("Task does not exist");
         // Never started before
-        if let Progress::Pending { total: Some(total) } = &task.progress {
-            task.progress = Progress::InProgress {
-                done: 1,
-                total: *total,
-                // subtasks: None,
-            };
-            self.output();
-        } else if let Progress::InProgress {
-            done,
-            total,
-            // subtasks: _,
-        } = &task.progress
-        {
-            if done >= total {
+        match &task.progress {
+            Progress::Pending { total: Some(total) } => {
+                task.progress = Progress::InProgress {
+                    done: 1,
+                    total: *total,
+                    // subtasks: None,
+                };
+            }
+            Progress::InProgress {
+                done,
+                total,
+                // subtasks: _,
+            } => {
+                if done >= total {
+                    if !silent {
+                        panic!("Maxed out");
+                    }
+                    return;
+                }
+                task.progress = Progress::InProgress {
+                    done: done + by,
+                    total: *total,
+                    // subtasks: None,
+                };
+            }
+            Progress::Running if !silent => {
+                panic!("Task is a spinner");
+            }
+            _ => {
                 if !silent {
-                    panic!("Maxed out");
+                    panic!("Task already finished");
                 }
                 return;
             }
-            task.progress = Progress::InProgress {
-                done: done + by,
-                total: *total,
-                // subtasks: None,
-            };
-            self.output();
-        } else if !silent {
-            panic!("Task is a spinner");
         }
+        self.output();
     }
     pub fn increment(&mut self, by: usize, silent: bool) {
         let task_name: String = self.task_list[self.task_counter].clone();
