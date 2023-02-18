@@ -8,4 +8,4 @@ component_management:
         - src/python
 
 comment:
-  layout: "header, diff, flags, components" # show component info in the PR comment
+  layout: "reach, diff, flags, components, files" # show component info in the PR comment
