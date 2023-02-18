@@ -43,6 +43,7 @@ jobs:
         run: poe ci
       - name: Upload to CodeCov
         uses: codecov/codecov-action@v2
+        flags: python
   python-docs:
     runs-on: ubuntu-latest
     defaults:
@@ -135,3 +136,4 @@ jobs:
         run: ./grcov . --source-dir . --binary-path ./target/debug/ --output-type lcov --branch --ignore-not-existing -o ./lcov.info
       - name: Upload to CodeCov
         uses: codecov/codecov-action@v2
+        flags: rust
