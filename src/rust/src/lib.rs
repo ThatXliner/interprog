@@ -38,8 +38,8 @@ impl Task {
         return self;
     }
     /// Change the name
-    pub fn name(mut self, new_name: String) -> Self {
-        self.name = new_name;
+    pub fn name(mut self, new_name: impl Into<String>) -> Self {
+        self.name = new_name.into();
         return self;
     }
 }
@@ -255,20 +255,20 @@ impl TaskManager {
     pub fn error_task(
         &mut self,
         task_name: impl AsRef<str>,
-        message: &str,
+        message: impl Into<String>,
     ) -> Result<(), errors::ManagerError> {
         let task = &mut self
             .tasks
             .get_mut(task_name.as_ref())
             .ok_or(errors::ManagerError::NonexistentTask)?;
         task.progress = Status::Error {
-            message: message.to_string(),
+            message: message.into(),
         };
         self.task_counter += 1;
         self.output();
         Ok(())
     }
-    pub fn error(&mut self, message: &str) -> Result<(), errors::ManagerError> {
+    pub fn error(&mut self, message: impl Into<String>) -> Result<(), errors::ManagerError> {
         let task_name: String = self
             .task_list
             .get(self.task_counter)
