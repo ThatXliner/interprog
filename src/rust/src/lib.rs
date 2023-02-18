@@ -22,7 +22,7 @@ pub struct Task {
     pub progress: Status,
 }
 impl Task {
-    pub fn new<S: Into<String>>(name: S) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Task {
             name: name.into(),
             progress: Status::Pending { total: None },
@@ -138,10 +138,10 @@ impl TaskManager {
         Ok(())
     }
 
-    pub fn start_task(&mut self, task_name: &str) -> Result<(), errors::ManagerError> {
+    pub fn start_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::ManagerError> {
         let task = &mut self
             .tasks
-            .get_mut(task_name)
+            .get_mut(task_name.as_ref())
             .ok_or(errors::ManagerError::NonexistentTask)?;
         if let Status::Pending { total } = &task.progress {
             match total {
@@ -171,12 +171,12 @@ impl TaskManager {
 
     pub fn increment_task(
         &mut self,
-        task_name: &str,
+        task_name: impl AsRef<str>,
         by: usize,
     ) -> Result<(), errors::ManagerError> {
         let task = &mut self
             .tasks
-            .get_mut(task_name)
+            .get_mut(task_name.as_ref())
             .ok_or(errors::ManagerError::NonexistentTask)?;
         // Never started before
         match &task.progress {
@@ -221,10 +221,10 @@ impl TaskManager {
         self.increment_task(&task_name, by)
     }
 
-    pub fn finish_task(&mut self, task_name: &str) -> Result<(), errors::ManagerError> {
+    pub fn finish_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::ManagerError> {
         let task = &mut self
             .tasks
-            .get_mut(task_name)
+            .get_mut(task_name.as_ref())
             .ok_or(errors::ManagerError::NonexistentTask)?;
         // TODO: Implement subtasks
         // if let Status::InProgress {
@@ -254,12 +254,12 @@ impl TaskManager {
 
     pub fn error_task(
         &mut self,
-        task_name: &str,
+        task_name: impl AsRef<str>,
         message: &str,
     ) -> Result<(), errors::ManagerError> {
         let task = &mut self
             .tasks
-            .get_mut(task_name)
+            .get_mut(task_name.as_ref())
             .ok_or(errors::ManagerError::NonexistentTask)?;
         task.progress = Status::Error {
             message: message.to_string(),
