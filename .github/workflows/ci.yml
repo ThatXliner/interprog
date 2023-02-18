@@ -42,7 +42,7 @@ jobs:
       - name: Run test suite
         run: poe ci
       - name: Upload to CodeCov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         flags: python
   python-docs:
     runs-on: ubuntu-latest
@@ -135,5 +135,5 @@ jobs:
       - name: Generate coverage files
         run: ./grcov . --source-dir . --binary-path ./target/debug/ --output-type lcov --branch --ignore-not-existing -o ./lcov.info
       - name: Upload to CodeCov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         flags: rust
