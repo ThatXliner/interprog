@@ -124,5 +124,14 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: llvm-tools-preview
+      - name: Install grcov
+        run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
       - name: Test project
         run: cargo test
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
+      - name: Generate coverage files
+        run: ./grcov . --source-dir . --binary-path ./target/debug/ --output-type lcov --branch --ignore-not-existing -o ./target/debug/coverage/
+      - name: Upload to CodeCov
+        uses: codecov/codecov-action@v2
