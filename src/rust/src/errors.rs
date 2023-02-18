@@ -8,6 +8,7 @@ pub enum ManagerError {
     NonexistentTask,
     #[error("The task is the wrong type for the requested operation")]
     InvalidTaskType,
+    // XXX: Better naming
     #[error("Task is already done")]
-    MaxedOutTask,
+    TaskAlreadyFinished,
 }
