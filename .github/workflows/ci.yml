@@ -132,6 +132,6 @@ jobs:
         env:
           RUSTFLAGS: "-Cinstrument-coverage"
       - name: Generate coverage files
-        run: ./grcov . --source-dir . --binary-path ./target/debug/ --output-type lcov --branch --ignore-not-existing -o ./target/debug/coverage/
+        run: ./grcov . --source-dir . --binary-path ./target/debug/ --output-type lcov --branch --ignore-not-existing -o ./lcov.info
       - name: Upload to CodeCov
         uses: codecov/codecov-action@v2
