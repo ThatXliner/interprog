@@ -8,8 +8,6 @@ use serde_json::ser::to_string as to_json_string;
 use std::collections::HashMap;
 use std::io::{self, Write};
 /// Represents a task.
-///
-/// TODO: Use builder pattern and a `.add` method on the `TaskManager`?
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Task {
     /// The name of a task
@@ -24,9 +22,9 @@ pub struct Task {
     pub progress: Status,
 }
 impl Task {
-    pub fn new(name: String) -> Self {
+    pub fn new<S: Into<String>>(name: S) -> Self {
         Task {
-            name,
+            name: name.into(),
             progress: Status::Pending { total: None },
         }
     }
@@ -292,14 +290,14 @@ mod tests {
     fn it_works() {
         let mut manager = TaskManager::new();
         println!("Hi");
-        manager.add_task(Task::new("name".to_string())).unwrap();
+        manager.add_task(Task::new("name")).unwrap();
         manager.start().unwrap();
         manager.finish().unwrap();
     }
     #[test]
     fn real_example() {
         let mut manager = TaskManager::new();
-        manager.add_task(Task::new("Log in".to_string())).unwrap();
+        manager.add_task(Task::new("Log in")).unwrap();
         manager.start().unwrap();
         manager.finish().unwrap();
         let classes = vec!["English", "History", "Science", "Math"];
