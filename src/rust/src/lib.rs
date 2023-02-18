@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 /// Represents a task.
 ///
-/// TODO: Maybe change API to use macro/factory and a `.add` method on the `TaskManager`?
+/// TODO: Use builder pattern and a `.add` method on the `TaskManager`?
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Task {
     /// The name of a task
@@ -23,6 +23,28 @@ pub struct Task {
     /// - Naming this field `status` and renaming the current key for the status type to `type` (it's currently `status`) does not reflect that this whole key-value pair is about the progress of the task.
     pub progress: Status,
 }
+impl Task {
+    pub fn new(name: String) -> Self {
+        Task {
+            name,
+            progress: Status::Pending { total: None },
+        }
+    }
+    /// Change the total
+    ///
+    /// TODO: Subtasks
+    pub fn total(mut self, new_total: usize) -> Self {
+        self.progress = Status::Pending {
+            total: Some(new_total),
+        };
+        return self;
+    }
+    /// Change the name
+    pub fn name(mut self, new_name: String) -> Self {
+        self.name = new_name;
+        return self;
+    }
+}
 /// Represents the status of a task.
 ///
 /// There are 3 main states: Pending, Running, and finished.
@@ -35,7 +57,7 @@ pub enum Status {
     /// The `total` field is optional. If it exists/is not null,
     /// it means the task is *iterative* and has a known end
     /// Otherwise, we assume it to be a spinner task.
-    /// The total field exists in this `Pending` vairant since if we use, say
+    /// The total field exists in this `Pending` variant since if we use, say
     /// ```
     /// # use interprog::Status;
     /// # let X = 1;
@@ -111,46 +133,9 @@ impl TaskManager {
         }
     }
 
-    pub fn set_task_total(
-        &mut self,
-        task_name: &str,
-        new_total: usize,
-    ) -> Result<(), errors::ManagerError> {
-        let task = &mut self
-            .tasks
-            .get_mut(task_name)
-            .ok_or(errors::ManagerError::NonexistentTask)?;
-
-        if let Status::Pending { total: _ } = &task.progress {
-            task.progress = Status::Pending {
-                total: Some(new_total),
-            }
-        } else {
-            return Err(errors::ManagerError::TaskAlreadyStarted);
-        }
-        Ok(())
-    }
-    pub fn set_total(&mut self, new_total: usize) -> Result<(), errors::ManagerError> {
-        let task_name: String = self
-            .task_list
-            .get(self.task_counter)
-            .ok_or(errors::ManagerError::NonexistentTask)?
-            .clone();
-        self.set_task_total(&task_name, new_total)
-    }
-
-    pub fn add_task(
-        &mut self,
-        name: &str,
-        total: Option<usize>,
-    ) -> Result<(), errors::ManagerError> {
-        self.tasks.insert(
-            name.to_string(),
-            Task {
-                name: name.to_string(),
-                progress: Status::Pending { total },
-            },
-        );
+    pub fn add_task(&mut self, task: Task) -> Result<(), errors::ManagerError> {
+        let name = task.name.clone();
+        self.tasks.insert(name.clone(), task);
         self.task_list.push(name.to_string());
         Ok(())
     }
@@ -301,29 +286,26 @@ impl Default for TaskManager {
 }
 #[cfg(test)]
 mod tests {
-    use crate::TaskManager;
+    use crate::{Task, TaskManager};
 
     #[test]
     fn it_works() {
         let mut manager = TaskManager::new();
         println!("Hi");
-        manager.add_task("name", None).unwrap();
+        manager.add_task(Task::new("name".to_string())).unwrap();
         manager.start().unwrap();
         manager.finish().unwrap();
     }
     #[test]
     fn real_example() {
         let mut manager = TaskManager::new();
-        manager.add_task("Log in", None).unwrap();
+        manager.add_task(Task::new("Log in".to_string())).unwrap();
         manager.start().unwrap();
         manager.finish().unwrap();
         let classes = vec!["English", "History", "Science", "Math"];
         for class in &classes {
             manager
-                .add_task(&(format!("Scraping {class}")), None)
-                .unwrap();
-            manager
-                .set_task_total(&(format!("Scraping {class}")), 4)
+                .add_task(Task::new(format!("Scraping {class}")).total(4))
                 .unwrap();
         }
         for _ in 0..4 {
