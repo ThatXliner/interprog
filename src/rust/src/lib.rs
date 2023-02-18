@@ -289,7 +289,6 @@ mod tests {
     #[test]
     fn it_works() {
         let mut manager = TaskManager::new();
-        println!("Hi");
         manager.add_task(Task::new("name")).unwrap();
         manager.start().unwrap();
         manager.finish().unwrap();
@@ -309,9 +308,16 @@ mod tests {
         for _ in 0..4 {
             for class in &classes {
                 manager
-                    .increment_task(&(format!("Scraping {class}")), 1)
+                    .increment_task(format!("Scraping {class}"), 1)
                     .unwrap();
             }
         }
+    }
+    #[test]
+    fn static_names() {
+        let mut manager = TaskManager::new();
+        manager.add_task(Task::new("Log in")).unwrap();
+        manager.start_task("Log in").unwrap();
+        manager.finish().unwrap();
     }
 }
