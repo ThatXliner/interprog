@@ -108,7 +108,7 @@ pub struct TaskManager {
     pub tasks: HashMap<String, Task>,
     pub task_list: Vec<String>,
     pub task_counter: usize,
-    pub silent: bool,
+    silent: bool,
 }
 
 impl TaskManager {
@@ -133,7 +133,11 @@ impl TaskManager {
 
     pub fn add_task(&mut self, task: Task) -> Result<(), errors::ManagerError> {
         let name = task.name.clone();
-        self.tasks.insert(name.clone(), task);
+        match self.tasks.entry(name.clone()) {
+            Occupied(_) => return Err(errors::ManagerError::TaskAlreadyExists),
+            Vacant(entry) => entry.insert(task),
+        }
+        insert(name.clone(), task);
         self.task_list.push(name.to_string());
         Ok(())
     }
