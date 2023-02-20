@@ -5,31 +5,61 @@ docs if you have questions
 """
 import json
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, TypedDict, Union, Literal
+import dataclasses
+from typing import Dict, List, Optional, Union, Literal
 
 
-class PendingStatus(TypedDict):
-    status: Literal["pending"]
-    total: Optional[int]
+def _status(msg):
+    def wrapper(cls):
+        def status(self) -> str:
+            return msg
+
+        cls.status = property(status)
+
+    return wrapper
 
 
-class RunningStatus(TypedDict):
-    status: Literal["running"]
+@dataclass
+class PendingStatus:
+    total: Optional[int] = field(default=None)
+
+    @property
+    def status(self) -> Literal["pending"]:
+        return "pending"
 
 
-class FinishedStatus(TypedDict):
-    status: Literal["finished"]
+@dataclass
+class RunningStatus:
+    @property
+    def status(self) -> Literal["running"]:
+        return "running"
 
 
-class ErrorStatus(TypedDict):
-    status: Literal["error"]
+@dataclass
+class FinishedStatus:
+    @property
+    def status(self) -> Literal["finished"]:
+        return "finished"
+
+
+@dataclass
+class ErrorStatus:
     message: str
 
+    @property
+    def status(self) -> Literal["error"]:
+        return "error"
 
-class InProgressStatus(TypedDict):
-    status: Literal["in_progress"]
+
+@dataclass
+class InProgressStatus:
     done: int
     total: int
+
+    @property
+    def status(self) -> Literal["in_progress"]:
+        return "in_progress"
+
     # subtasks: List["TaskManager"]
 
 
@@ -38,13 +68,29 @@ Status = Union[
 ]
 
 
-class Task(TypedDict):
+@dataclass
+class Task:
     name: str
     # TODO: Recursive tasks
     progress: Status
 
+    def set_name(self, new_name: str):
+        self.name = new_name
+        return self
+
+    def set_total(self, new_total: int):
+        self.progress.total = new_total
+        return self
+
 
 JsonOutput = List[Task]
+
+
+class EnhancedJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
 
 
 @dataclass
@@ -58,67 +104,45 @@ class TaskManager:
         if self.silent:
             return
         # TODO: A buffer that flushes at an interval
-        print(json.dumps(self.task_list))
+        print(json.dumps(self.task_list, cls=EnhancedJSONEncoder))
 
     def _current_task(self) -> Task:
         return self.tasks[self.task_list[self.task_counter]]
 
-    def set_task_total(self, task_name: str, new_total: int) -> None:
-        """Set total of the current bar task"""
-        task = self.tasks[task_name]
-        if task["progress"]["status"] != "pending":
-            raise RuntimeError("Task already started")
-        task["progress"]["total"] = new_total
-        self._output()
-
-    def add_task(self, name: str, total: Optional[int] = None) -> None:
+    def add_task(self, task: Task) -> None:
         """Enqueue a task"""
-        self.tasks.append(
-            {
-                "name": name,
-                "progress": {
-                    "status": "pending",
-                    **({"total": total} if total is not None else {}),
-                },
-            }
-        )
+        if task.name in self.tasks:
+            raise RuntimeError("Task already exists")
+        self.tasks[task.name] = task
+        self.task_list.append(task.name)
         self._output()
 
     def start_task(self, task_name: str) -> None:
         """Start the next task"""
         task = self.tasks[task_name]
-        if task["progress"]["status"] != "pending":
+        if not isinstance(task.progress, PendingStatus):
             raise RuntimeError("Task is already running")
-        if "total" in task["progress"] and task["progress"]["total"] is not None:
-            task["progress"]["done"] = 0
-            task["progress"]["status"] = "in_progress"
+        if task.progress.total is not None:
+            task.progress = InProgressStatus(done=0, total=task.progress.total)
         else:
-            task["progress"]["status"] = "running"
+            task.progress = RunningStatus()
         self._output()
 
     def increment_task(self, task_name: str, by: int = 1, silent: bool = True) -> None:
         """Increment a bar task"""
         task = self.tasks[task_name]
-        if task["progress"]["status"] == "pending":
-            if "total" not in task["progress"] or task["progress"]["total"] is None:
+        if isinstance(task.progress, PendingStatus):
+            if task.progress.total is None:
                 raise RuntimeError("Task is a spinner")
-            task["progress"] = {
-                "status": "in_progress",
-                "done": 1,
-                "total": task["progress"]["total"],
-            }
-        elif task["progress"]["status"] == "in_progress":
-            if task["progress"]["done"] >= task["progress"]["done"]:
+            task.progress = InProgressStatus(done=1, total=task.progress.total)
+        elif isinstance(task.progress, InProgressStatus):
+            if task.progress.done >= task.progress.done:
                 if silent:
                     return
                 raise RuntimeError("Maxed out")
-            task["progress"] = {
-                "status": "in_progress",
-                "done": task["done"] + by,
-                "total": task["progress"]["total"],
-            }
+            task.progress.done += by
 
-        elif task["progress"]["status"] == "running":
+        elif isinstance(task.progress, RunningStatus):
             raise RuntimeError("Task is a spinner")
         else:
             raise RuntimeError("Task already finished")
@@ -127,14 +151,14 @@ class TaskManager:
     def finish_task(self, task_name: str) -> None:
         """Mark a task as finished"""
         task = self.tasks[task_name]
-        task["progress"] = {"status": "finished"}
+        task.progress = FinishedStatus()
         self.task_counter += 1
         self._output()
 
     def error_task(self, task_name: str, message: str) -> None:
         """Mark a task as errored with a reason"""
         task = self.tasks[task_name]
-        task["progress"] = {"status": "error", "message": message}
+        task.progress = ErrorStatus(message)
         self.task_counter += 1
         self._output()
 
