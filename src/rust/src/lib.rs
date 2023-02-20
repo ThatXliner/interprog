@@ -5,6 +5,7 @@ pub mod errors;
 
 use serde::{Deserialize, Serialize};
 use serde_json::ser::to_string as to_json_string;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::io::{self, Write};
 /// Represents a task.
@@ -35,12 +36,12 @@ impl Task {
         self.progress = Status::Pending {
             total: Some(new_total),
         };
-        return self;
+        self
     }
     /// Change the name
     pub fn name(mut self, new_name: impl Into<String>) -> Self {
         self.name = new_name.into();
-        return self;
+        self
     }
 }
 /// Represents the status of a task.
@@ -134,11 +135,10 @@ impl TaskManager {
     pub fn add_task(&mut self, task: Task) -> Result<(), errors::ManagerError> {
         let name = task.name.clone();
         match self.tasks.entry(name.clone()) {
-            Occupied(_) => return Err(errors::ManagerError::TaskAlreadyExists),
-            Vacant(entry) => entry.insert(task),
-        }
-        insert(name.clone(), task);
-        self.task_list.push(name.to_string());
+            Entry::Occupied(_) => return Err(errors::ManagerError::TaskAlreadyExists),
+            Entry::Vacant(entry) => entry.insert(task),
+        };
+        self.task_list.push(name);
         Ok(())
     }
 
