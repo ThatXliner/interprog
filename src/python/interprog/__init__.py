@@ -7,6 +7,8 @@ import json
 from dataclasses import dataclass, field
 import dataclasses
 from typing import Dict, List, Optional, Union, Literal
+import inspect
+import copy
 
 
 def _status(msg):
@@ -22,33 +24,23 @@ def _status(msg):
 @dataclass
 class PendingStatus:
     total: Optional[int] = field(default=None)
-
-    @property
-    def status(self) -> Literal["pending"]:
-        return "pending"
+    status: Literal["pending"] = field(default="pending")
 
 
 @dataclass
 class RunningStatus:
-    @property
-    def status(self) -> Literal["running"]:
-        return "running"
+    status: Literal["running"] = field(default="running")
 
 
 @dataclass
 class FinishedStatus:
-    @property
-    def status(self) -> Literal["finished"]:
-        return "finished"
+    status: Literal["finished"] = field(default="finished")
 
 
 @dataclass
 class ErrorStatus:
     message: str
-
-    @property
-    def status(self) -> Literal["error"]:
-        return "error"
+    status: Literal["error"] = field(default="error")
 
 
 @dataclass
@@ -56,9 +48,7 @@ class InProgressStatus:
     done: int
     total: int
 
-    @property
-    def status(self) -> Literal["in_progress"]:
-        return "in_progress"
+    status: Literal["in_progress"] = field(default="in_progress")
 
     # subtasks: List["TaskManager"]
 
@@ -72,7 +62,7 @@ Status = Union[
 class Task:
     name: str
     # TODO: Recursive tasks
-    progress: Status
+    progress: Status = field(default_factory=PendingStatus)
 
     def set_name(self, new_name: str):
         self.name = new_name
@@ -86,6 +76,23 @@ class Task:
 JsonOutput = List[Task]
 
 
+_YES_GEN = {"start_task", "increment_task", "finish_task", "error_task"}
+
+
+def _add_non_task_methods(cls):
+    for member_name, member in inspect.getmembers(copy.deepcopy(cls)):
+        if member_name in _YES_GEN:
+
+            def wrapper(self, *args, __name=member_name, **kwargs):
+                print(f"Calling {__name}")
+                getattr(self, __name)(
+                    self.task_list[self.task_counter], *args, **kwargs
+                )
+
+            setattr(cls, member_name[:-5], wrapper)
+    return cls
+
+
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
@@ -94,6 +101,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
 
 
 @dataclass
+@_add_non_task_methods
 class TaskManager:
     tasks: Dict[str, Task] = field(default_factory=dict)
     task_list: JsonOutput = field(default_factory=list)
@@ -104,10 +112,7 @@ class TaskManager:
         if self.silent:
             return
         # TODO: A buffer that flushes at an interval
-        print(json.dumps(self.task_list, cls=EnhancedJSONEncoder))
-
-    def _current_task(self) -> Task:
-        return self.tasks[self.task_list[self.task_counter]]
+        print(json.dumps(list(self.tasks.values()), cls=EnhancedJSONEncoder))
 
     def add_task(self, task: Task) -> None:
         """Enqueue a task"""
@@ -122,10 +127,12 @@ class TaskManager:
         task = self.tasks[task_name]
         if not isinstance(task.progress, PendingStatus):
             raise RuntimeError("Task is already running")
-        if task.progress.total is not None:
-            task.progress = InProgressStatus(done=0, total=task.progress.total)
+        if self.tasks[task_name].progress.total is not None:
+            self.tasks[task_name].progress = InProgressStatus(
+                done=0, total=self.tasks[task_name].progress.total
+            )
         else:
-            task.progress = RunningStatus()
+            self.tasks[task_name].progress = RunningStatus()
         self._output()
 
     def increment_task(self, task_name: str, by: int = 1, silent: bool = True) -> None:
