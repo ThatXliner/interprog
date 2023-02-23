@@ -9,13 +9,15 @@
 
 ## Installation
 
-This project was originally written in Python, now with a Rust port. See the corresponding directories in this monorepo for installation instructions.
+This project was originally written in Python, now with a Rust implementation. See the corresponding directories in this monorepo for installation instructions.
 
 - [Python](./src/python)
 - [Rust](./src/rust)
 
 ## License
 
-Copyright © 2022, Bryan Hu
+Copyright © 2023, Bryan Hu
 
-This project is licensed under the [MIT](https://github.com/ThatXliner/interprog/blob/main/LICENSE.txt).
+- The Rust implementation is dual licensed under the [MIT](https://opensource.org/license/mit/) and [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), because that's mostly everybody in that ecosystem.
+- The Python implementation is licensed under the [MIT](https://opensource.org/license/mit/).
+- This whole standard/protocol is licensed under the [MIT](https://opensource.org/license/mit/).

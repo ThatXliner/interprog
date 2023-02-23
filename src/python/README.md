@@ -20,6 +20,6 @@ $ poetry add interprog
 
 ## License
 
-Copyright © 2022, Bryan Hu
+Copyright © 2023, Bryan Hu
 
 This project is licensed under the [MIT](https://github.com/ThatXliner/interprog/blob/main/LICENSE.txt).
