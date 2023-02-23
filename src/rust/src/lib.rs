@@ -9,7 +9,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::io::{self, Write};
 /// Represents a task.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
 pub struct Task {
     /// The name of a task
     pub name: String,
@@ -44,11 +44,16 @@ impl Task {
         self
     }
 }
+impl From<String> for Task {
+    fn from(name: String) -> Self {
+        Task::new(name)
+    }
+}
 /// Represents the status of a task.
 ///
 /// There are 3 main states: Pending, Running, and finished.
 /// But since there are 2 types of running (iterative or spinner) and 3 types of finished (success and error), thus 5 variants
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
 #[serde(tag = "status")]
 pub enum Status {
     /// Represents a pending task, waiting to be executed.
@@ -104,7 +109,7 @@ pub enum Status {
 /// actually support multithreading.
 /// Yes, this struct is currently *not thread-safe*
 /// (I think)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct TaskManager {
     pub tasks: HashMap<String, Task>,
     pub task_list: Vec<String>,
@@ -132,21 +137,21 @@ impl TaskManager {
         }
     }
 
-    pub fn add_task(&mut self, task: Task) -> Result<(), errors::ManagerError> {
+    pub fn add_task(&mut self, task: Task) -> Result<(), errors::InterprogError> {
         let name = task.name.clone();
         match self.tasks.entry(name.clone()) {
-            Entry::Occupied(_) => return Err(errors::ManagerError::TaskAlreadyExists),
+            Entry::Occupied(_) => return Err(errors::InterprogError::TaskAlreadyExists),
             Entry::Vacant(entry) => entry.insert(task),
         };
         self.task_list.push(name);
         Ok(())
     }
 
-    pub fn start_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::ManagerError> {
+    pub fn start_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::InterprogError> {
         let task = &mut self
             .tasks
             .get_mut(task_name.as_ref())
-            .ok_or(errors::ManagerError::NonexistentTask)?;
+            .ok_or(errors::InterprogError::NonexistentTask)?;
         if let Status::Pending { total } = &task.progress {
             match total {
                 Some(total) => {
@@ -159,16 +164,16 @@ impl TaskManager {
                 None => task.progress = Status::Running,
             }
         } else {
-            return Err(errors::ManagerError::TaskAlreadyStarted);
+            return Err(errors::InterprogError::TaskAlreadyStarted);
         }
         self.output();
         Ok(())
     }
-    pub fn start(&mut self) -> Result<(), errors::ManagerError> {
+    pub fn start(&mut self) -> Result<(), errors::InterprogError> {
         let task_name: String = self
             .task_list
             .get(self.task_counter)
-            .ok_or(errors::ManagerError::NonexistentTask)?
+            .ok_or(errors::InterprogError::NonexistentTask)?
             .clone();
         self.start_task(&task_name)
     }
@@ -177,11 +182,11 @@ impl TaskManager {
         &mut self,
         task_name: impl AsRef<str>,
         by: usize,
-    ) -> Result<(), errors::ManagerError> {
+    ) -> Result<(), errors::InterprogError> {
         let task = &mut self
             .tasks
             .get_mut(task_name.as_ref())
-            .ok_or(errors::ManagerError::NonexistentTask)?;
+            .ok_or(errors::InterprogError::NonexistentTask)?;
         // Never started before
         match &task.progress {
             Status::Pending { total: Some(total) } => {
@@ -197,7 +202,7 @@ impl TaskManager {
                 // subtasks: _,
             } => {
                 if done >= total {
-                    return Err(errors::ManagerError::TaskAlreadyFinished);
+                    return Err(errors::InterprogError::TaskAlreadyFinished);
                 }
                 // TODO: If incrementing makes it full, do we consider finished?
                 task.progress = Status::InProgress {
@@ -207,29 +212,32 @@ impl TaskManager {
                 };
             }
             Status::Running | Status::Pending { total: None } => {
-                return Err(errors::ManagerError::InvalidTaskType)
+                return Err(errors::InterprogError::InvalidTaskType)
             }
             Status::Finished | Status::Error { message: _ } => {
-                return Err(errors::ManagerError::TaskAlreadyFinished)
+                return Err(errors::InterprogError::TaskAlreadyFinished)
             }
         }
         self.output();
         Ok(())
     }
-    pub fn increment(&mut self, by: usize) -> Result<(), errors::ManagerError> {
+    pub fn increment(&mut self, by: usize) -> Result<(), errors::InterprogError> {
         let task_name: String = self
             .task_list
             .get(self.task_counter)
-            .ok_or(errors::ManagerError::NonexistentTask)?
+            .ok_or(errors::InterprogError::NonexistentTask)?
             .clone();
         self.increment_task(&task_name, by)
     }
 
-    pub fn finish_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::ManagerError> {
+    pub fn finish_task(
+        &mut self,
+        task_name: impl AsRef<str>,
+    ) -> Result<(), errors::InterprogError> {
         let task = &mut self
             .tasks
             .get_mut(task_name.as_ref())
-            .ok_or(errors::ManagerError::NonexistentTask)?;
+            .ok_or(errors::InterprogError::NonexistentTask)?;
         // TODO: Implement subtasks
         // if let Status::InProgress {
         //     done: _,
@@ -247,11 +255,11 @@ impl TaskManager {
         self.output();
         Ok(())
     }
-    pub fn finish(&mut self) -> Result<(), errors::ManagerError> {
+    pub fn finish(&mut self) -> Result<(), errors::InterprogError> {
         let task_name: String = self
             .task_list
             .get(self.task_counter)
-            .ok_or(errors::ManagerError::NonexistentTask)?
+            .ok_or(errors::InterprogError::NonexistentTask)?
             .clone();
         self.finish_task(&task_name)
     }
@@ -260,11 +268,11 @@ impl TaskManager {
         &mut self,
         task_name: impl AsRef<str>,
         message: impl Into<String>,
-    ) -> Result<(), errors::ManagerError> {
+    ) -> Result<(), errors::InterprogError> {
         let task = &mut self
             .tasks
             .get_mut(task_name.as_ref())
-            .ok_or(errors::ManagerError::NonexistentTask)?;
+            .ok_or(errors::InterprogError::NonexistentTask)?;
         task.progress = Status::Error {
             message: message.into(),
         };
@@ -272,11 +280,11 @@ impl TaskManager {
         self.output();
         Ok(())
     }
-    pub fn error(&mut self, message: impl Into<String>) -> Result<(), errors::ManagerError> {
+    pub fn error(&mut self, message: impl Into<String>) -> Result<(), errors::InterprogError> {
         let task_name: String = self
             .task_list
             .get(self.task_counter)
-            .ok_or(errors::ManagerError::NonexistentTask)?
+            .ok_or(errors::InterprogError::NonexistentTask)?
             .clone();
         self.error_task(&task_name, message)
     }
