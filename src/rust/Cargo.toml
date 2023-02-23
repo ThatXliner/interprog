@@ -8,6 +8,7 @@ description = "Inter-process progress reports made easy"
 homepage = "https://github.com/ThatXliner/interprog"
 repository = "https://github.com/ThatXliner/interprog/tree/main/src/rust"
 readme = "README.md"
+keywords = ["ipc", "progress", "interprog"]
 
 [dependencies]
 serde = { version = "^1.0.152", features = ["derive"] }
