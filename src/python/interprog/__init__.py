@@ -1,19 +1,22 @@
-"""Inter-process progress reports made easy
+"""Inter-process progress reports made easy.
 
 This API should be self-explanatory. See the specification
 docs if you have questions
 """
+
+import copy
+import dataclasses
+import inspect
 import json
 from dataclasses import dataclass, field
-import dataclasses
-from typing import Dict, List, Optional, Union, Literal
-import inspect
-import copy
+from typing import Dict, List, Literal, Optional, Union
+
+from interprog import errors
 
 
-def _status(msg):
+def _status(msg: str):
     def wrapper(cls):
-        def status(self) -> str:
+        def status(_) -> str:
             return msg
 
         cls.status = property(status)
@@ -50,11 +53,13 @@ class InProgressStatus:
 
     status: Literal["in_progress"] = field(default="in_progress")
 
-    # subtasks: List["TaskManager"]
-
 
 Status = Union[
-    PendingStatus, RunningStatus, FinishedStatus, ErrorStatus, InProgressStatus
+    PendingStatus,
+    RunningStatus,
+    FinishedStatus,
+    ErrorStatus,
+    InProgressStatus,
 ]
 
 
@@ -80,13 +85,14 @@ _YES_GEN = {"start_task", "increment_task", "finish_task", "error_task"}
 
 
 def _add_non_task_methods(cls):
-    for member_name, member in inspect.getmembers(copy.deepcopy(cls)):
+    for member_name, _ in inspect.getmembers(copy.deepcopy(cls)):
         if member_name in _YES_GEN:
 
             def wrapper(self, *args, __name=member_name, **kwargs):
-                print(f"Calling {__name}")
                 getattr(self, __name)(
-                    self.task_list[self.task_counter], *args, **kwargs
+                    self.task_list[self.task_counter],
+                    *args,
+                    **kwargs,
                 )
 
             setattr(cls, member_name[:-5], wrapper)
@@ -94,7 +100,7 @@ def _add_non_task_methods(cls):
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
-    def default(self, o):
+    def default(self, o: object):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
         return super().default(o)
@@ -115,55 +121,59 @@ class TaskManager:
         print(json.dumps(list(self.tasks.values()), cls=EnhancedJSONEncoder))
 
     def add_task(self, task: Task) -> None:
-        """Enqueue a task"""
+        """Enqueue a task."""
         if task.name in self.tasks:
-            raise RuntimeError("Task already exists")
+            raise errors.TaskAlreadyExists
         self.tasks[task.name] = task
         self.task_list.append(task.name)
         self._output()
 
     def start_task(self, task_name: str) -> None:
-        """Start the next task"""
+        """Start the next task."""
         task = self.tasks[task_name]
         if not isinstance(task.progress, PendingStatus):
-            raise RuntimeError("Task is already running")
+            raise errors.TaskAlreadyRunningError
         if self.tasks[task_name].progress.total is not None:
             self.tasks[task_name].progress = InProgressStatus(
-                done=0, total=self.tasks[task_name].progress.total
+                done=0,
+                total=self.tasks[task_name].progress.total,
             )
         else:
             self.tasks[task_name].progress = RunningStatus()
         self._output()
 
     def increment_task(self, task_name: str, by: int = 1, silent: bool = True) -> None:
-        """Increment a bar task"""
+        """Increment a bar task."""
         task = self.tasks[task_name]
         if isinstance(task.progress, PendingStatus):
             if task.progress.total is None:
-                raise RuntimeError("Task is a spinner")
+                message = f"{task!r} is a spinner"
+                raise errors.InvalidTaskTypeError(message)
             task.progress = InProgressStatus(done=1, total=task.progress.total)
         elif isinstance(task.progress, InProgressStatus):
             if task.progress.done >= task.progress.done:
                 if silent:
                     return
-                raise RuntimeError("Maxed out")
+                raise errors.MaxedOutTask
             task.progress.done += by
 
         elif isinstance(task.progress, RunningStatus):
-            raise RuntimeError("Task is a spinner")
+            message = f"{task!r} is a spinner"
+            raise errors.InvalidTaskTypeError(message)
         else:
-            raise RuntimeError("Task already finished")
+            message = "Task is finished"
+            raise errors.InvalidTaskTypeError(message)
         self._output()
 
     def finish_task(self, task_name: str) -> None:
-        """Mark a task as finished"""
+        """Mark a task as finished."""
         task = self.tasks[task_name]
         task.progress = FinishedStatus()
         self.task_counter += 1
         self._output()
 
     def error_task(self, task_name: str, message: str) -> None:
-        """Mark a task as errored with a reason"""
+        """Mark a task as errored with a reason."""
         task = self.tasks[task_name]
         task.progress = ErrorStatus(message)
         self.task_counter += 1
