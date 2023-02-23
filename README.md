@@ -1,6 +1,6 @@
 # Interprog
 
-[![codecov](https://codecov.io/gh/ThatXliner/interprog/branch/main/graph/badge.svg)](https://codecov.io/gh/ThatXliner/interprog) [![Documentation Status](https://readthedocs.org/projects/interprog/badge/?version=latest)](https://interprog.readthedocs.io/en/latest/?badge=latest) [![CI](https://github.com/ThatXliner/interprog/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ThatXliner/interprog/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/interprog)](https://pypi.org/project/interprog)
+[![codecov](https://codecov.io/gh/ThatXliner/interprog/branch/main/graph/badge.svg)](https://codecov.io/gh/ThatXliner/interprog) [![Documentation Status](https://readthedocs.org/projects/interprog/badge/?version=latest)](https://interprog.readthedocs.io/en/latest/?badge=latest) [![CI](https://github.com/ThatXliner/interprog/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ThatXliner/interprog/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/interprog)](https://pypi.org/project/interprog) [![Crates.io](https://img.shields.io/crates/v/interprog)](https://crates.io/crates/interprog)
 
 > Inter-process progress reports made easy
 
