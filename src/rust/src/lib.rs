@@ -118,6 +118,7 @@ pub struct TaskManager {
 }
 
 impl TaskManager {
+    #[inline]
     fn output(&self) {
         if self.silent {
             return;
