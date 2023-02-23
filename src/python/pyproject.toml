@@ -2,7 +2,7 @@
 name = "interprog"
 description = "Inter-process progress reports made easy"
 authors = ["Bryan Hu <bryan.hu.2020@gmail.com>"]
-version = "0.2.0"
+version = "0.3.0"
 
 readme = "README.md"
 license = "MIT"
@@ -16,7 +16,7 @@ classifiers = [
 ]
 documentation = "https://interprog.readthedocs.io/en/latest/index.html"
 homepage = "https://github.com/ThatXliner/interprog"
-# keywords = ["awesome", "project"]  # Maximum of 5 keywords
+keywords = ["ipc", "progress", "interprog"]  # Maximum of 5 keywords
 
 [tool.poetry.dependencies]
 python = "^3.8"

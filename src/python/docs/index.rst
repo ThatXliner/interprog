@@ -5,6 +5,8 @@ Welcome to Interprog's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   api_ref
+
 
 
 Indices and tables

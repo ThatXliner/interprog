@@ -2,21 +2,24 @@ name: CI
 on:
   schedule:
     - cron: "0 0 1 * *" # Run every month
-  # This way, we can make sure code doesn't break via external dependancies
+  # This way, we can make sure code doesn't break via external dependencies
   push:
-  pull_request:
 env:
   POETRY_VERSION: 1.3.0
 jobs:
-  test:
+  python-tests:
     strategy:
       matrix:
         python-version:
           - 3.8
           - 3.9
           - "3.10"
+          - "3.11"
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./src/python
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -39,9 +42,12 @@ jobs:
       - name: Run test suite
         run: poe ci
       - name: Upload to CodeCov
-        uses: codecov/codecov-action@v2
-  docs:
+        uses: codecov/codecov-action@v3
+  python-docs:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/python
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -55,8 +61,11 @@ jobs:
           poetry install  # Second time to install the project
       - name: Build docs
         run: poe docs
-  build:
+  python-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/python
     steps:
       - name: Check out repository code
         uses: actions/checkout@v2
@@ -69,3 +78,60 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Build project
         run: poetry build
+  rust-build:
+    # TODO: Multiple OSes?
+    # Also, cross-compilation exists
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/rust
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build project
+        run: cargo build
+  rust-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/rust
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt, clippy
+          toolchain: stable
+      - name: Lint with clippy
+        run: cargo clippy
+      - name: Lint with fmt
+        run: cargo fmt --check
+  rust-test:
+    # TODO: Do we need multiple OSs?
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/rust
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Install Rust stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: llvm-tools-preview
+      - name: Install grcov
+        run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf -
+      - name: Test project
+        run: cargo test
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
+      - name: Generate coverage files
+        run: ./grcov . --source-dir . --binary-path ./target/debug/ --output-type lcov --branch --ignore-not-existing -o ./lcov.info
+      - name: Upload to CodeCov
+        uses: codecov/codecov-action@v3
