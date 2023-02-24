@@ -71,7 +71,7 @@ impl TaskManager {
             .ok_or(errors::InterprogError::NonexistentTask)?;
         // perhaps it was an old task that got removed
         while !inner.tasks.contains_key(task_name) {
-            inner.task_list.pop_front();
+            // inner.task_list.pop_front();
             task_name = inner
                 .task_list
                 .front()
