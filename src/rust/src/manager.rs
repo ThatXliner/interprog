@@ -9,7 +9,7 @@ use serde_json::ser::to_string as to_json_string;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
+// use std::sync::{Arc, Mutex};
 
 pub trait TaskManagerApi {
     // Hey... the &mut self...
@@ -29,43 +29,50 @@ pub trait TaskManagerApi {
     fn get_task(&mut self, task_name: impl AsRef<str>)
         -> Result<&mut Task, errors::InterprogError>;
 }
-
-/// Synchronous non-thread-safe implementation of the TaskManager API
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct TaskManager {
+struct TaskManagerRef {
     pub tasks: HashMap<String, Task>,
     pub task_list: VecDeque<String>,
     silent: bool,
+}
+/// Synchronous non-thread-safe implementation of the TaskManager API
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct TaskManager {
+    inner: TaskManagerRef,
 }
 
 impl TaskManager {
     #[inline]
     fn output(&self) {
-        if self.silent {
+        let inner = &self.inner;
+        if inner.silent {
             return;
         }
         println!(
             "{}",
-            to_json_string(&self.tasks.values().collect::<Vec<_>>()).expect("Should never happen")
+            to_json_string(&inner.tasks.values().collect::<Vec<_>>()).expect("Should never happen")
         );
         io::stdout().flush().unwrap();
     }
     pub fn new() -> Self {
         Self {
-            tasks: HashMap::new(),
-            task_list: VecDeque::new(),
-            silent: false,
+            inner: TaskManagerRef {
+                tasks: HashMap::new(),
+                task_list: VecDeque::new(),
+                silent: false,
+            },
         }
     }
     fn get_first_task(&mut self) -> Result<String, errors::InterprogError> {
-        let mut task_name = self
+        let inner = &mut self.inner;
+        let mut task_name = inner
             .task_list
             .front()
             .ok_or(errors::InterprogError::NonexistentTask)?;
         // perhaps it was an old task that got removed
-        while !self.tasks.contains_key(task_name) {
-            self.task_list.pop_front();
-            task_name = self
+        while !inner.tasks.contains_key(task_name) {
+            inner.task_list.pop_front();
+            task_name = inner
                 .task_list
                 .front()
                 .ok_or(errors::InterprogError::NonexistentTask)?;
@@ -95,17 +102,19 @@ impl TaskManagerApi for TaskManager {
         task_name: impl AsRef<str>,
     ) -> Result<&mut Task, errors::InterprogError> {
         return Ok(self
+            .inner
             .tasks
             .get_mut(task_name.as_ref())
             .ok_or(errors::InterprogError::NonexistentTask)?);
     }
     fn add_task(&mut self, task: Task) -> Result<(), errors::InterprogError> {
+        let inner = &mut self.inner;
         let name = task.name.clone();
-        match self.tasks.entry(name.clone()) {
+        match inner.tasks.entry(name.clone()) {
             Entry::Occupied(_) => return Err(errors::InterprogError::TaskAlreadyExists),
             Entry::Vacant(entry) => entry.insert(task),
         };
-        self.task_list.push_back(name);
+        inner.task_list.push_back(name);
         Ok(())
     }
 
@@ -185,7 +194,7 @@ impl TaskManagerApi for TaskManager {
         // }
 
         task.progress = Status::Finished;
-        self.tasks.remove_entry(task_name.as_ref());
+        self.inner.tasks.remove_entry(task_name.as_ref());
         self.output();
         Ok(())
     }
@@ -199,7 +208,7 @@ impl TaskManagerApi for TaskManager {
         task.progress = Status::Error {
             message: message.into(),
         };
-        self.tasks.remove_entry(task_name.as_ref());
+        self.inner.tasks.remove_entry(task_name.as_ref());
         self.output();
         Ok(())
     }

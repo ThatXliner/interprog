@@ -4,12 +4,12 @@
 pub mod errors;
 pub mod manager;
 pub mod task;
-pub use crate::manager::TaskManager;
+pub use crate::manager::{TaskManager, TaskManagerApi};
 pub use crate::task::{Status, Task};
 
 #[cfg(test)]
 mod tests {
-    use crate::{Task, TaskManager};
+    use crate::{Task, TaskManager, TaskManagerApi};
 
     #[test]
     fn it_works() {
