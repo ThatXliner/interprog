@@ -9,7 +9,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::io::{self, Write};
 /// Represents a task.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Ord, PartialOrd, Clone)]
 pub struct Task {
     /// The name of a task
     pub name: String,
@@ -53,7 +53,7 @@ impl From<String> for Task {
 ///
 /// There are 3 main states: Pending, Running, and finished.
 /// But since there are 2 types of running (iterative or spinner) and 3 types of finished (success and error), thus 5 variants
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Ord, PartialOrd, Clone)]
 #[serde(tag = "status")]
 pub enum Status {
     /// Represents a pending task, waiting to be executed.
@@ -109,7 +109,7 @@ pub enum Status {
 /// actually support multithreading.
 /// Yes, this struct is currently *not thread-safe*
 /// (I think)
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct TaskManager {
     pub tasks: HashMap<String, Task>,
     pub task_list: Vec<String>,
