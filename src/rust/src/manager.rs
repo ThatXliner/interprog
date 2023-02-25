@@ -2,40 +2,44 @@
 //!
 //! Most methods have an `task` variant that
 //! works on a specified task name instead of
-//! the first unfinished task queued (FIFO).
+//! the first task queued that's not finished (FIFO).
 use crate::{errors, Status, Task};
+use paste::paste;
 use serde::{Deserialize, Serialize};
 use serde_json::ser::to_string as to_json_string;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::io::{self, Write};
-// use std::sync::{Arc, Mutex};
 
-pub trait TaskManagerApi {
-    // Hey... the &mut self...
-    fn add_task(&mut self, task: Task) -> Result<(), errors::InterprogError>;
-    fn start_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::InterprogError>;
-    fn increment_task(
-        &mut self,
-        task_name: impl AsRef<str>,
-        by: usize,
-    ) -> Result<(), errors::InterprogError>;
-    fn finish_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::InterprogError>;
-    fn error_task(
-        &mut self,
-        task_name: impl AsRef<str>,
-        message: impl Into<String>,
-    ) -> Result<(), errors::InterprogError>;
-    fn get_task(&mut self, task_name: impl AsRef<str>)
-        -> Result<&mut Task, errors::InterprogError>;
-}
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 struct TaskManagerRef {
-    pub tasks: HashMap<String, Task>,
-    pub task_list: VecDeque<String>,
+    tasks: HashMap<String, Task>,
+    task_list: VecDeque<String>,
     silent: bool,
 }
-/// Synchronous non-thread-safe implementation of the TaskManager API
+macro_rules! gen_non_task {
+    ($x:ident) => {
+        pub fn $x(&mut self) -> Result<(), errors::InterprogError> {
+            let task_name: String = self.get_first_task()?;
+            paste! {self.[<$x _task>](&task_name)}
+        }
+    };
+    ($x:ident, $($param:ident : $type:ty),+) => {
+        pub fn $x(&mut self, $($param : $type),+) -> Result<(), errors::InterprogError> {
+            let task_name: String = self.get_first_task()?;
+            paste! {self.[<$x _task>](&task_name, $($param),+)}
+        }
+    };
+}
+/// A synchronous, non-thread-safe TaskManager
+///
+/// If you were to use this in multi-threaded scenarios, the best way so far is to
+/// wrap it in an Arc and a Mutex like
+/// ```
+/// # use std::sync::{Mutex, Arc};
+/// # use interprog::TaskManager;
+/// let manager = Arc::new(Mutex::new(TaskManager::new()));
+/// ```
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct TaskManager {
     inner: TaskManagerRef,
@@ -79,25 +83,13 @@ impl TaskManager {
         }
         return Ok(task_name.clone());
     }
-    pub fn start(&mut self) -> Result<(), errors::InterprogError> {
-        let task_name: String = self.get_first_task()?;
-        self.start_task(&task_name)
-    }
-    pub fn increment(&mut self, by: usize) -> Result<(), errors::InterprogError> {
-        let task_name: String = self.get_first_task()?;
-        self.increment_task(&task_name, by)
-    }
-    pub fn finish(&mut self) -> Result<(), errors::InterprogError> {
-        let task_name: String = self.get_first_task()?;
-        self.finish_task(&task_name)
-    }
-    pub fn error(&mut self, message: impl Into<String>) -> Result<(), errors::InterprogError> {
-        let task_name: String = self.get_first_task()?;
-        self.error_task(&task_name, message)
-    }
-}
-impl TaskManagerApi for TaskManager {
-    fn get_task(
+    gen_non_task!(start);
+    gen_non_task!(finish);
+    gen_non_task!(increment, by: usize);
+    gen_non_task!(error, message: impl Into<String>);
+    // }
+    // impl TaskManagerApi for TaskManager {
+    pub fn get_task(
         &mut self,
         task_name: impl AsRef<str>,
     ) -> Result<&mut Task, errors::InterprogError> {
@@ -107,7 +99,7 @@ impl TaskManagerApi for TaskManager {
             .get_mut(task_name.as_ref())
             .ok_or(errors::InterprogError::NonexistentTask)?);
     }
-    fn add_task(&mut self, task: Task) -> Result<(), errors::InterprogError> {
+    pub fn add_task(&mut self, task: Task) -> Result<(), errors::InterprogError> {
         let inner = &mut self.inner;
         let name = task.name.clone();
         match inner.tasks.entry(name.clone()) {
@@ -117,8 +109,7 @@ impl TaskManagerApi for TaskManager {
         inner.task_list.push_back(name);
         Ok(())
     }
-
-    fn start_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::InterprogError> {
+    pub fn start_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::InterprogError> {
         let task = self.get_task(task_name)?;
         if let Status::Pending { total } = &task.progress {
             match total {
@@ -138,7 +129,7 @@ impl TaskManagerApi for TaskManager {
         Ok(())
     }
 
-    fn increment_task(
+    pub fn increment_task(
         &mut self,
         task_name: impl AsRef<str>,
         by: usize,
@@ -179,7 +170,10 @@ impl TaskManagerApi for TaskManager {
         Ok(())
     }
 
-    fn finish_task(&mut self, task_name: impl AsRef<str>) -> Result<(), errors::InterprogError> {
+    pub fn finish_task(
+        &mut self,
+        task_name: impl AsRef<str>,
+    ) -> Result<(), errors::InterprogError> {
         let task = self.get_task(&task_name)?;
         // TODO: Implement subtasks
         // if let Status::InProgress {
@@ -199,7 +193,7 @@ impl TaskManagerApi for TaskManager {
         Ok(())
     }
 
-    fn error_task(
+    pub fn error_task(
         &mut self,
         task_name: impl AsRef<str>,
         message: impl Into<String>,

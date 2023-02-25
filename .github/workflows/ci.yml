@@ -78,22 +78,6 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       - name: Build project
         run: poetry build
-  rust-build:
-    # TODO: Multiple OSes?
-    # Also, cross-compilation exists
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./src/rust
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - name: Install Rust stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - name: Build project
-        run: cargo build
   rust-lint:
     runs-on: ubuntu-latest
     defaults:
