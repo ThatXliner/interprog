@@ -74,12 +74,16 @@ impl TaskManager {
             .front()
             .ok_or(errors::InterprogError::NonexistentTask)?;
         // perhaps it was an old task that got removed
-        while !inner.tasks.contains_key(task_name) {
-            // inner.task_list.pop_front();
-            task_name = inner
-                .task_list
-                .front()
-                .ok_or(errors::InterprogError::NonexistentTask)?;
+        while let Some(next) = inner.tasks.get(task_name) {
+            if let Status::Finished | Status::Error { message: _ } = next.progress {
+                inner.task_list.pop_front();
+                task_name = inner
+                    .task_list
+                    .front()
+                    .ok_or(errors::InterprogError::NonexistentTask)?
+            } else {
+                break;
+            }
         }
         return Ok(task_name.clone());
     }
@@ -188,7 +192,6 @@ impl TaskManager {
         // }
 
         task.progress = Status::Finished;
-        self.inner.tasks.remove_entry(task_name.as_ref());
         self.output();
         Ok(())
     }
@@ -202,7 +205,6 @@ impl TaskManager {
         task.progress = Status::Error {
             message: message.into(),
         };
-        self.inner.tasks.remove_entry(task_name.as_ref());
         self.output();
         Ok(())
     }

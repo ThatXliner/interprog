@@ -63,11 +63,13 @@ mod tests {
         manager.add_task(Task::new("Log in")).unwrap();
         manager.add_task(Task::new("Do work").total(3)).unwrap();
         manager.add_task(Task::new("Finish")).unwrap();
+
         manager.start().unwrap();
         manager.error("I died").unwrap();
-        manager.start().unwrap();
-        manager.start().unwrap();
+
+        manager.start_task("Do work").unwrap();
         manager.increment(2).unwrap();
+        manager.start_task("Finish").unwrap();
         manager.increment(1).unwrap();
         manager.finish().unwrap();
         manager.finish().unwrap();
