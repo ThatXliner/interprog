@@ -12,11 +12,15 @@ mod tests {
     use crate::{Task, TaskManager};
 
     #[test]
-    fn it_works() {
+    fn sanity_check() {
         let mut manager = TaskManager::new();
         manager.add_task(Task::new("name")).unwrap();
         manager.start().unwrap();
         manager.finish().unwrap();
+    }
+    #[test]
+    fn modify_task_name() {
+        assert_eq!(Task::new("Lorem Ispum"), Task::new("").name("Lorem Ispum"));
     }
     #[test]
     fn real_example() {
@@ -44,5 +48,21 @@ mod tests {
         manager.add_task(Task::new("Log in")).unwrap();
         manager.start_task("Log in").unwrap();
         manager.finish().unwrap();
+    }
+    #[test]
+    fn non_task_methods() {
+        let mut manager = TaskManager::new();
+        manager.add_task(Task::new("Log in").total(1)).unwrap();
+        manager.start().unwrap();
+        manager.increment(1).unwrap();
+        manager.finish().unwrap();
+    }
+    #[test]
+    fn errors() {
+        let mut manager = TaskManager::new();
+        manager.add_task(Task::new("Log in").total(1)).unwrap();
+        manager.start().unwrap();
+        manager.increment(1).unwrap();
+        manager.error("I died").unwrap();
     }
 }
