@@ -58,11 +58,19 @@ mod tests {
         manager.finish().unwrap();
     }
     #[test]
-    fn errors() {
+    fn log_in_out() {
         let mut manager = TaskManager::new();
-        manager.add_task(Task::new("Log in").total(1)).unwrap();
+        manager.add_task(Task::new("Log in")).unwrap();
+        manager.add_task(Task::new("Do work").total(3)).unwrap();
+        manager.add_task(Task::new("Finish")).unwrap();
         manager.start().unwrap();
-        manager.increment(1).unwrap();
         manager.error("I died").unwrap();
+        manager.start().unwrap();
+        manager.start().unwrap();
+        manager.increment(2).unwrap();
+        manager.increment(1).unwrap();
+        manager.finish().unwrap();
+        manager.finish().unwrap();
     }
+    // TODO: Test possible errors to be thrown
 }
