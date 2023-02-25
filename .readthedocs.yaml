@@ -1,3 +1,5 @@
+# Required
+version: 2
 python:
    install:
    - requirements: src/python/docs/requirements.txt
