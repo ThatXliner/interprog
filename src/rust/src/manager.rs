@@ -1,8 +1,10 @@
 //! The main structs that manages tasks and printing them
 //!
-//! Most methods have an `task` variant that
-//! works on a specified task name instead of
-//! the first task queued that's not finished (FIFO).
+//! Most methods have a non `*_task` variant that
+//! works on the first task queued that's not
+//! finished (FIFO) instead of a specified task name.
+//! They are generally not recommended to use,
+//! and only exist for convenience.
 use crate::{errors, Status, Task};
 use paste::paste;
 use serde::{Deserialize, Serialize};
