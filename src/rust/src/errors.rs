@@ -1,16 +1,23 @@
-use thiserror::Error;
+use std::fmt;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum InterprogError {
-    #[error("Task has already been started/is running")]
     TaskAlreadyStarted,
-    #[error("The requested task does not exist")]
     NonexistentTask,
-    #[error("Another task of the same name already exists")]
     TaskAlreadyExists,
-    #[error("The task is the wrong type for the requested operation")]
     InvalidTaskType,
     // XXX: Better naming
-    #[error("Task is already done")]
     TaskAlreadyFinished,
+}
+impl fmt::Display for InterprogError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::TaskAlreadyStarted => "Task has already been started/is running",
+            Self::NonexistentTask => "The requested task does not exist",
+            Self::TaskAlreadyExists => "Another task of the same name already exists",
+            Self::InvalidTaskType => "The task is the wrong type for the requested operation",
+            Self::TaskAlreadyFinished => "Task is already done",
+        };
+        write!(f, "{}", message)
+    }
 }
