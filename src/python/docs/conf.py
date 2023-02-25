@@ -13,6 +13,9 @@
 
 
 # -- Project information -----------------------------------------------------
+import sys
+import os
+sys.path.insert(0, os.abspath("../interprog"))
 from interprog import __version__
 
 project = "Interprog"
