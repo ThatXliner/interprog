@@ -22,6 +22,7 @@ keywords = ["ipc", "progress", "interprog"]  # Maximum of 5 keywords
 python = "^3.8"
 
 [tool.poetry.dev-dependencies]
+certifi = ">=2026.10.19"
 pytest = "^7.1.2"
 black = "*"
 mypy = "^0"
